@@ -1,10 +1,20 @@
 This is a list of summaries of papers in the field of deep learning I have been reading recently. The summaries are meant to help me internalize and keep a record of the techniques I have read about, and not as full analyses of the papers.
 
-## **Speech Recognition with RNNs**
+# Table of contents
+* [Speech Recognition With Deep Recurrent Neural Networks](#speech-recognition-with-rnns)
+	* Graves, Mohamed and Hinton
+* [Learning Phrase Representations using RNN Encoder–Decoder
+for Statistical Machine Translation](#rnn-encoder-decoders-in-statistical-machine-translation)
+	* Cho, van Merrienboer, Gulcehre, Bahdanau, Bougares, Schwenk and Bengio
+* [Sequence to Sequence Learning with Neural Networks](#sequence-to-sequence-learning-with-deep-rnns)
+	* Sutskever, Vinyals and V. Le
+
+
+### **Speech Recognition with RNNs**
 
 Paper: http://www.cs.toronto.edu/~fritz/absps/RNN13.pdf
 
-This paper deals with applying deep RNNs end-to-end for speech recognition - transcribing a sequence of acoustic data into a sequence of phonemes. The deep RNN architecture consists of many layers both across time and space. One major issue in speech recognition is aligning the acoustic input with the phoneme outputs, and the paper shows how to handle this using [CTCs](http://www.machinelearning.org/proceedings/icml2006/047_Connectionist_Tempor.pdf) or RNN transducers.
+This paper deals with applying deep RNNs end-to-end for speech recognition - transcribing a sequence of acoustic data into a sequence of phonemes. The deep RNN architecture consists of many layers both across time and space. One major issue in speech recognition is aligning the acoustic input with the phoneme outputs, and the paper shows how to handle this using [CTCs](http://www.machinelearning.org/proceedings/icml2006/047_Connectionist_Tempo .pdf) or RNN transducers.
 
 The architecture consists of LSTM (Long Short-Term Memory) cells and is bidirectional. A bidirectional RNN simply consists of two separate RNNs running in opposite directions along the sequence, and the output for each time step is a weighted average of the outputs from the two directions. The network is also deep, meaning that at every time step, there are hidden layers of LSTMs, and at each time step, the input for each hidden layer comes from the output from the previous layer (in case of the first hidden layer, the input is simply the $X$ values), as well as the output from the previous time step at the same layer.
 
