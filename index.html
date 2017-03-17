@@ -3,11 +3,15 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Sequence to Sequence Learning for Machine Translation with Deep RNNs</title>
+<title>Attention-based Neural Machine Translation</title>
 <link rel="stylesheet" href="https://stackedit.io/res-min/themes/base.css" />
 <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML"></script>
 </head>
-<body><div class="container"><p>This is a list of summaries of papers in the field of deep learning I have been reading recently. The summaries are meant to help me internalize and keep a record of the techniques I have read about, and not as full analyses of the papers.</p>
+<body><div class="container"><p><br>
+<br>
+<br></p>
+
+<p>This is a list of summaries of papers in the field of deep learning I have been reading recently. The summaries are meant to help me internalize and keep a record of the techniques I have read about, and not as full analyses of the papers.</p>
 
 
 
@@ -15,32 +19,41 @@
 
 <ul>
 <li><a href="#speech-recognition-with-rnns">Speech Recognition With Deep Recurrent Neural Networks</a> <br>
-<ul><li>Graves, Mohamed and Hinton </li></ul></li>
-<li><a href="#rnn-encoder-decoders-in-statistical-machine-translation">Learning Phrase Representations using RNN Encoder–Decoder <br>
-for Statistical Machine Translation</a> <br>
+<ul><li>Graves, Mohamed and Hinton</li></ul></li>
+<li><a href="#rnn-encoder-decoders-in-statistical-machine-translation">Learning Phrase Representations using RNN Encoder–Decoder for Statistical Machine Translation</a> <br>
 <ul><li>Cho, van Merrienboer, Gulcehre, Bahdanau, Bougares, Schwenk and Bengio</li></ul></li>
-<li><a href="#sequence-to-sequence-learning-with-deep-rnns">Sequence to Sequence Learning <br>
-with Neural Networks</a> <br>
+<li><a href="#sequence-to-sequence-learning-with-deep-rnns">Sequence to Sequence Learning with Neural Networks</a> <br>
 <ul><li>Sutskever, Vinyals and V. Le</li></ul></li>
+<li><a href="#attention-based-neural-machine-translation">Attention-based Neural Machine Translation</a> <br>
+<ul><li>Luong, Pham and Manning (2015)</li></ul></li>
 </ul>
+
+<p><br></p>
 
 <h3 id="speech-recognition-with-rnns"><strong>Speech Recognition with RNNs</strong></h3>
 
 <p>Paper: <a href="http://www.cs.toronto.edu/~fritz/absps/RNN13.pdf">http://www.cs.toronto.edu/~fritz/absps/RNN13.pdf</a></p>
 
-<p>This paper deals with applying deep RNNs end-to-end for speech recognition - transcribing a sequence of acoustic data into a sequence of phonemes. The deep RNN architecture consists of many layers both across time and space. One major issue in speech recognition is aligning the acoustic input with the phoneme outputs, and the paper shows how to handle this using <a href="http://www.machinelearning.org/proceedings/icml2006/047_Connectionist_Tempor.pdf">CTCs</a> or RNN transducers.</p>
+<p>This paper deals with applying deep RNNs end-to-end for speech recognition - transcribing a sequence of acoustic data into a sequence of phonemes. The deep RNN architecture consists of many layers both across time and space. One major issue in speech recognition is aligning the acoustic input with the phoneme outputs, and the paper shows how to handle this using [CTCs](<a href="http://www.machinelearning.org/proceedings/icml2006/047_Connectionist_Tempo">http://www.machinelearning.org/proceedings/icml2006/047_Connectionist_Tempo</a> .pdf) or RNN transducers.</p>
 
-<p>The architecture consists of LSTM (Long Short-Term Memory) cells and is bidirectional. A bidirectional RNN simply consists of two separate RNNs running in opposite directions along the sequence, and the output for each time step is a weighted average of the outputs from the two directions. The network is also deep, meaning that at every time step, there are hidden layers of LSTMs, and at each time step, the input for each hidden layer comes from the output from the previous layer (in case of the first hidden layer, the input is simply the <script type="math/tex" id="MathJax-Element-265">X</script> values), as well as the output from the previous time step at the same layer.</p>
+<p>The architecture consists of LSTM (Long Short-Term Memory) cells and is bidirectional. A bidirectional RNN simply consists of two separate RNNs running in opposite directions along the sequence, and the output for each time step is a weighted average of the outputs from the two directions. The network is also deep, meaning that at every time step, there are hidden layers of LSTMs, and at each time step, the input for each hidden layer comes from the output from the previous layer (in case of the first hidden layer, the input is simply the <script type="math/tex" id="MathJax-Element-9487">X</script> values), as well as the output from the previous time step at the same layer.</p>
 
-<p>An issue that remains is the aligning of input to output data- the input data is not segmented by hand. A CTC is added to the output layer of the RNN, and it at every time step, it emits softmax probabilities of <script type="math/tex" id="MathJax-Element-266">(K+1)</script> symbols, where <script type="math/tex" id="MathJax-Element-267">K</script> is the number of phonemes, and the 1 comes from a special blank <script type="math/tex" id="MathJax-Element-268">\phi</script>  symbol. Note that the CTC model does not look at the outputs from the previous time step - it only uses the output of the last hidden layer for the current time step. The probability of an output sequence is then the sum over all alignments that are equivalent to this sequence. For example, “He is” in the audio data can be transcribed as “[hi] _ [Iz]” or “_ _ [hiz]” (blanks denoting spaces), and both should be correct. This can be computed by using a variant of the Forward-Backward algorithm for HMMs (described <a href="http://www.machinelearning.org/proceedings/icml2006/047_Connectionist_Tempor.pdf">here</a>).</p>
+<p>An issue that remains is the aligning of input to output data- the input data is not segmented by hand. A CTC is added to the output layer of the RNN, and it at every time step, it emits softmax probabilities of <script type="math/tex" id="MathJax-Element-9488">(K+1)</script> symbols, where <script type="math/tex" id="MathJax-Element-9489">K</script> is the number of phonemes, and the 1 comes from a special blank <script type="math/tex" id="MathJax-Element-9490">\phi</script>  symbol. Note that the CTC model does not look at the outputs from the previous time step - it only uses the output of the last hidden layer for the current time step. The probability of an output sequence is then the sum over all alignments that are equivalent to this sequence. For example, “He is” in the audio data can be transcribed as “[hi] _ [Iz]” or “_ _ [hiz]” (blanks denoting spaces), and both should be correct. This can be computed by using a variant of the Forward-Backward algorithm for HMMs (described <a href="http://www.machinelearning.org/proceedings/icml2006/047_Connectionist_Tempor.pdf">here</a>).</p>
 
-<p><em>* Note: *</em> An important point I realized later is that CTCs are applicable only when alignments are guaranteed to be monotonic. This means crossing alignments, such as <script type="math/tex" id="MathJax-Element-269">(1 2)</script> and <script type="math/tex" id="MathJax-Element-270">(a b)</script>, with <script type="math/tex" id="MathJax-Element-271">a</script> corresponding to <script type="math/tex" id="MathJax-Element-272">2</script> and <script type="math/tex" id="MathJax-Element-273">b</script> corresponding to <script type="math/tex" id="MathJax-Element-274">1</script>, cannot be represented.</p>
+<ul>
+<li><strong>Note</strong>:  An important point I realized later is that CTCs are applicable only when alignments are guaranteed to be monotonic. This means crossing alignments, such as <script type="math/tex" id="MathJax-Element-9491">(1 2)</script> and <script type="math/tex" id="MathJax-Element-9492">(a b)</script>, with <script type="math/tex" id="MathJax-Element-9493">a</script> corresponding to <script type="math/tex" id="MathJax-Element-9494">2</script> and <script type="math/tex" id="MathJax-Element-9495">b</script> corresponding to <script type="math/tex" id="MathJax-Element-9496">1</script>, cannot be represented.</li>
+</ul>
 
-<p>The RNN transducer method seems to augment CTCs by adding a separate RNN at the prediction layer, so that the prediction at every time step can also depend on the predictions made so far. So for a label <script type="math/tex" id="MathJax-Element-275">k</script>, it obtains both the <script type="math/tex" id="MathJax-Element-276">Pr(k|t)</script> from the CTC network, and <script type="math/tex" id="MathJax-Element-277">Pr(k|u)</script> from the prediction network, These two values are multiplied together and normalized.</p>
+<p>The RNN transducer method seems to augment CTCs by adding a separate RNN at the prediction layer, so that the prediction at every time step can also depend on the predictions made so far. So for a label <script type="math/tex" id="MathJax-Element-9497">k</script>, it obtains both the <script type="math/tex" id="MathJax-Element-9498">Pr(k|t)</script> from the CTC network, and <script type="math/tex" id="MathJax-Element-9499">Pr(k|u)</script> from the prediction network, These two values are multiplied together and normalized.</p>
 
-<p>Points to ponder: <br>
-* What is meant by the layer size in the paper? Are there multiple LSTMs in each “layer”? Looks like yes, but here, the layer size seems to mean the size of the output from each layer. For example, for the first layer, if the input <script type="math/tex" id="MathJax-Element-278">x_t</script> of dimenson <script type="math/tex" id="MathJax-Element-279">a</script> is multiplied by a weight vector <script type="math/tex" id="MathJax-Element-280">W_t</script> of dimensions <script type="math/tex" id="MathJax-Element-281">b \times a</script>, the layer size would be <script type="math/tex" id="MathJax-Element-282">b</script>. <br>
-* Will CTCs work for all alignment problems? Apparently no - they only seem to work when it is known that the length of the input sequence will NOT be less than that of the output sequence. This is obviously true for speech recognition.</p>
+<p>Points to ponder</p>
+
+<ul>
+<li>What is meant by the layer size in the paper? Are there multiple LSTMs in each “layer”? Looks like yes, but here, the layer size seems to mean the size of the output from each layer. For example, for the first layer, if the input <script type="math/tex" id="MathJax-Element-9500">x_t</script> of dimenson <script type="math/tex" id="MathJax-Element-9501">a</script> is multiplied by a weight vector <script type="math/tex" id="MathJax-Element-9502">W_t</script> of dimensions <script type="math/tex" id="MathJax-Element-9503">b \times a</script>, the layer size would be <script type="math/tex" id="MathJax-Element-9504">b</script>.</li>
+<li>Will CTCs work for all alignment problems? Apparently no - they only seem to work when it is known that the length of the input sequence will NOT be less than that of the output sequence. This is obviously true for speech recognition.</li>
+</ul>
+
+
 
 <h3 id="rnn-encoder-decoders-in-statistical-machine-translation"><strong>RNN Encoder-Decoders in Statistical Machine Translation</strong></h3>
 
@@ -48,13 +61,17 @@ with Neural Networks</a> <br>
 
 <p>In this paper, the authors describe an RNN based approach for encoding a variable length sequence into a fixed size vector (encoder), and then decoding a variable-length sequence from a fixed size vector. They claim the RNN encoder-decoder learns a continuous space representation of phrases that preserve both semantic and syntactic content.</p>
 
-<p>The output of the encoder is the hidden state <script type="math/tex" id="MathJax-Element-290">c</script> of the RNN at the last time step. For the decoder RNN, the hidden state at every time step is a function of the previous hidden state, the previous output, and <script type="math/tex" id="MathJax-Element-291">c</script>. That is, <script type="math/tex" id="MathJax-Element-292">h_{t} = f(h_{t-1}, y_{t-1}, c)</script>. The two components are then jointly trained to maximize the conditional normalized sum of the log likelihoods (the log likelihood of a single sequence-to-sequence translation is <script type="math/tex" id="MathJax-Element-293">\log{p_{\theta}(y_n | x_n)}</script>).</p>
+<p>The output of the encoder is the hidden state <script type="math/tex" id="MathJax-Element-9505">c</script> of the RNN at the last time step. For the decoder RNN, the hidden state at every time step is a function of the previous hidden state, the previous output, and <script type="math/tex" id="MathJax-Element-9506">c</script>. That is, <script type="math/tex" id="MathJax-Element-9507">h_{t} = f(h_{t-1}, y_{t-1}, c)</script>. The two components are then jointly trained to maximize the conditional normalized sum of the log likelihoods (the log likelihood of a single sequence-to-sequence translation is <script type="math/tex" id="MathJax-Element-9508">\log{p_{\theta}(y_n | x_n)}</script>). The following image from the paper shows the broad overview of the architecture:</p>
 
-<p>The authors also introduce a new hidden unit similar to the LSTM. This consists of a reset gate <script type="math/tex" id="MathJax-Element-294">r_j</script> and an update gate <script type="math/tex" id="MathJax-Element-295">z_j</script>. The reset gate decides how much of the previous hidden state to include in computing a temporary new hidden state <script type="math/tex" id="MathJax-Element-296">\tilde{h_t}</script>, which also depends on the input <script type="math/tex" id="MathJax-Element-297">x_t</script>, while the update gate decides how much information from the previous hidden state will carry over to the current hidden state. So: <script type="math/tex; mode=display" id="MathJax-Element-298">h_j^t = z_jh_j^{t-1} + (1-z_j)\tilde{h^t_j}</script></p>
+<p><img src="https://www.dropbox.com/s/pus9cwan90j6yy9/Screen%20Shot%202017-03-15%20at%202.02.10%20AM.png?dl=1" alt="RNN encoder-decoder" title=""></p>
 
-<p>The RNN encoder decoder is applied in the scoring of phrase pairs in language translation. The statistical model of translation tries to find <script type="math/tex" id="MathJax-Element-299">f</script> that maximizes <script type="math/tex" id="MathJax-Element-300">p(f|e) = p(e|f)p(e)</script> (the translation and language model terms, respectively), given an input <script type="math/tex" id="MathJax-Element-301">e</script>. Phrase pairs from the two languages can be fed into the system, and the score is simply <script type="math/tex" id="MathJax-Element-302">p_{\theta}(y|x)</script>, where <script type="math/tex" id="MathJax-Element-303">(x, y)</script> is the phrase pair. This score can then add as an additional feature in the model.</p>
+<p>The authors also introduce a new hidden unit similar to the LSTM. This consists of a reset gate <script type="math/tex" id="MathJax-Element-9509">r_j</script> and an update gate <script type="math/tex" id="MathJax-Element-9510">z_j</script>. The reset gate decides how much of the previous hidden state to include in computing a temporary new hidden state <script type="math/tex" id="MathJax-Element-9511">\tilde{h_t}</script>, which also depends on the input <script type="math/tex" id="MathJax-Element-9512">x_t</script>, while the update gate decides how much information from the previous hidden state will carry over to the current hidden state. So: <script type="math/tex; mode=display" id="MathJax-Element-9513">h_j^t = z_jh_j^{t-1} + (1-z_j)\tilde{h^t_j}</script></p>
+
+<p>The RNN encoder decoder is applied in the scoring of phrase pairs in language translation. The statistical model of translation tries to find <script type="math/tex" id="MathJax-Element-9514">f</script> that maximizes <script type="math/tex" id="MathJax-Element-9515">p(f|e) = p(e|f)p(e)</script> (the translation and language model terms, respectively), given an input <script type="math/tex" id="MathJax-Element-9516">e</script>. Phrase pairs from the two languages can be fed into the system, and the score is simply <script type="math/tex" id="MathJax-Element-9517">p_{\theta}(y|x)</script>, where <script type="math/tex" id="MathJax-Element-9518">(x, y)</script> is the phrase pair. This score can then add as an additional feature in the model.</p>
 
 <p>The authors also mention the use of <a href="https://ufal.mff.cuni.cz/pbml/93/art-schwenk.pdf">CSLM</a> in their models, which uses NNs for the language model. It appears that the contributions of the RNN encoder-decoder and CSLM are independent. The authors claim that the embeddings generated by the encoder also capture both syntactic and semantic content of the phrases.</p>
+
+
 
 <h3 id="sequence-to-sequence-learning-with-deep-rnns"><strong>Sequence to Sequence Learning with Deep RNNs</strong></h3>
 
@@ -64,9 +81,37 @@ with Neural Networks</a> <br>
 
 <p>The authors first use a deep (four layer) RNN with LSTMs for converting the input sequence into a fixed-dimensional vector (the hidden state of the final time step in this RNN), and then connected a second similar RNN to generate the output sequence (given the previous hidden state and previous emitted symbol). The “previous hidden state” for the first time step in the second RNN is the final hidden state in the first RNN.</p>
 
-<p>An important strategy used by the authors is that they reverse the order of words in the input sequence. The intuitive reason why this improves results is as follows: consider an input sequence <script type="math/tex" id="MathJax-Element-283">a, b, c</script> and the corresponding output <script type="math/tex" id="MathJax-Element-284">\alpha, \beta, \gamma</script>. If the input sequence is reversed so that the input-to-output mapping is now <script type="math/tex" id="MathJax-Element-285">c, b, a - \alpha, \beta, \gamma</script>, <script type="math/tex" id="MathJax-Element-286">a</script> is in close proximity to <script type="math/tex" id="MathJax-Element-287">\alpha</script>, <script type="math/tex" id="MathJax-Element-288">b</script> fairly close to <script type="math/tex" id="MathJax-Element-289">\beta</script>, and so on. Thus, it is easier for SGD to “ “establish communication” between the input and the output”. The authors say that they do not have a complete explanation for this phenomenon, however.</p>
+<p>An important strategy used by the authors is that they reverse the order of words in the input sequence. The intuitive reason why this improves results is as follows: consider an input sequence <script type="math/tex" id="MathJax-Element-9526">a, b, c</script> and the corresponding output <script type="math/tex" id="MathJax-Element-9527">\alpha, \beta, \gamma</script>. If the input sequence is reversed so that the input-to-output mapping is now <script type="math/tex" id="MathJax-Element-9528">c, b, a - \alpha, \beta, \gamma</script>, <script type="math/tex" id="MathJax-Element-9529">a</script> is in close proximity to <script type="math/tex" id="MathJax-Element-9530">\alpha</script>, <script type="math/tex" id="MathJax-Element-9531">b</script> fairly close to <script type="math/tex" id="MathJax-Element-9532">\beta</script>, and so on. Thus, it is easier for SGD to “ “establish communication” between the input and the output”. The authors say that they do not have a complete explanation for this phenomenon, however.</p>
 
 <p>Decoding the output sequence is done in the paper using beam search. The authors use a form of gradient clipping to address exploding gradients. They also made sure that all sentences within a minibatch were roughly of the same length, so that the more frequent shorter sentences do not suppress the learning of longer sentences within a minibatch.</p>
 
-<p>The main way this paper differs from the paper by Cho et al. is that the RNNs are used directly for machine translation in this paper. In the other paper, the RNNs were used to obtain scores for phrase pairs, which made up the translation model of a Statistical Machine Translation system.</p></div></body>
+<p>The main way this paper differs from the paper by Cho et al. is that the RNNs are used directly for machine translation in this paper. In the other paper, the RNNs were used to obtain scores for phrase pairs, which made up the translation model of a Statistical Machine Translation system.</p>
+
+<h3 id="attention-based-neural-machine-translation"><strong>Attention-based Neural Machine Translation</strong></h3>
+
+<p>Paper: <a href="https://arxiv.org/pdf/1508.04025.pdf">https://arxiv.org/pdf/1508.04025.pdf</a></p>
+
+<p>This paper deals with techniques for applying “attention”-based mechanisms to RNNs in machine translation. The basic architecture used here is similar to that in the paper by <a href="http://papers.nips.cc/paper/5346-sequence-to-sequence-learning-with-neural-networks.pdf">Sutskever et al. (2014)</a>, with a stacking (deep) RNN with LSTMs used for encoding the source sentence, and then another connected deep RNN with LSTMs for producing the target sentence. The authors introduce two types of attention - global attention (all source words are attended) and local attention (a specific window of source words is attended).</p>
+
+<p>In both types of attention approaches, at each time step <script type="math/tex" id="MathJax-Element-9452">t</script> of the decoding phase, a context vector <script type="math/tex" id="MathJax-Element-9453">c_t</script> is built. <script type="math/tex" id="MathJax-Element-9454">c_t</script> encodes the source-side “attentional” information. This is concatenated to the current hidden state of the decoder, <script type="math/tex" id="MathJax-Element-9455">h_t</script>, and passed through a <script type="math/tex" id="MathJax-Element-9456">tanh</script> layer to produce a new hidden state, <script type="math/tex" id="MathJax-Element-9457">\tilde{h_t}</script> (<script type="math/tex" id="MathJax-Element-9458">\tilde{h_t} = tanh(W_c[c_t;h_t])</script>).</p>
+
+<ul>
+<li><p><strong>Global attention:</strong> In this method, all hidden states of the encoder are used to make <script type="math/tex" id="MathJax-Element-9459">c_t</script>. First, a variable length alignment vector <script type="math/tex" id="MathJax-Element-9460">a_t</script> is made by assigning an alignment score <script type="math/tex" id="MathJax-Element-9461">score(h_t, \bar{h_s})</script> to the hidden state <script type="math/tex" id="MathJax-Element-9462">\bar{h_s}</script> of every source side word <script type="math/tex" id="MathJax-Element-9463">s</script>, and then setting <script type="math/tex" id="MathJax-Element-9464">a_t(s)</script> as the softmax score. <script type="math/tex" id="MathJax-Element-9465">c_t</script> is then a weighted average of all the source hidden states, with the alignment vector as weights. Several different candidates are considered for the <script type="math/tex" id="MathJax-Element-9466">score()</script> function:</p>
+
+<ul><li><script type="math/tex" id="MathJax-Element-9467">h_t^T\bar{h_s}</script> (dot)</li>
+<li><script type="math/tex" id="MathJax-Element-9468">h_t^TW_a\bar{h_s}</script>   (general)</li>
+<li><script type="math/tex" id="MathJax-Element-9469">v_a^Ttanh(W_a[h_t;\bar{h_s}])</script> (concat)</li></ul></li>
+</ul>
+
+<p>The picture from the paper helps to clarify this:</p>
+
+<p><img src="https://www.dropbox.com/s/xcjh625ojtn3it5/Screen%20Shot%202017-03-17%20at%2012.03.42%20PM.png?dl=1" alt="Global attention model" title=""></p>
+
+<ul>
+<li><strong>Local attention:</strong> To reduce expense, local attention only considers a specific window of source words for every output time step. For every target word at time step <script type="math/tex" id="MathJax-Element-9470">t</script>, the model generates an alignment position <script type="math/tex" id="MathJax-Element-9471">p_t</script>, and only the set of source words in the window <script type="math/tex" id="MathJax-Element-9472">[p_t-D, p_t+D]</script> are used to calculate <script type="math/tex" id="MathJax-Element-9473">c_t</script> (similar to above). The authors use two methods to select <script type="math/tex" id="MathJax-Element-9474">p_t</script>, the more successful being <strong>local-p</strong>: <script type="math/tex" id="MathJax-Element-9475">p_t = S \cdot \sigma(v_p^T tanh(W_ph_t))</script>, where <script type="math/tex" id="MathJax-Element-9476">W_p</script> and <script type="math/tex" id="MathJax-Element-9477">h_t</script> are model parameters, and <script type="math/tex" id="MathJax-Element-9478">S</script> is the source sentence length. To attach more weight to words nearer to <script type="math/tex" id="MathJax-Element-9479">p_t</script>, the authors attach a Gaussian weight to the scores, so <script type="math/tex" id="MathJax-Element-9480">a_t(s) = align(h_t, \bar{h_s})exp(-\frac{(s-p_t)^2}{2\sigma^2})</script>, where the standard deviation is set to <script type="math/tex" id="MathJax-Element-9481">\frac{D}{2}</script>, and <script type="math/tex" id="MathJax-Element-9482">s</script> is an index of a word within the window. The model is differentiable.</li>
+</ul>
+
+<p>So far, the model does not take into consideration previous alignment information when generating target words. To address this, the authors use an input feeding approach, where the <script type="math/tex" id="MathJax-Element-9483">\tilde{h}_t</script> from the previous time step in the decoder is concatenated to the input of the next time step. This makes the model aware of previous alignment choices.</p>
+
+<p>During training the authors pre-process the corpus by replacing words outside of the 50K most frequent with <script type="math/tex" id="MathJax-Element-9484"><unknown></script> tags. The source sentence is reversed, gradient clipping used, and dropout (<script type="math/tex" id="MathJax-Element-9485">p=0.2</script>) is employed between the spatial layers. <script type="math/tex" id="MathJax-Element-9486">D</script> is set to 10 for the local attention models,</p></div></body>
 </html>
