@@ -13,6 +13,8 @@ This is a list of summaries of papers in the field of deep learning I have been 
 	* Sutskever, Vinyals and V. Le
 * [Attention-based Neural Machine Translation](#attention-based-neural-machine-translation)
 	* Luong, Pham and Manning (2015)
+* [Ask Me Anything: Dynamic Memory Networks for Natural Language Processing](#dynamic-memory-networks-for-nlp)
+	* Kumar et al. (2016)
 
 <br>
 
@@ -47,7 +49,7 @@ The output of the encoder is the hidden state $c$ of the RNN at the last time st
 
 ![RNN encoder-decoder](https://www.dropbox.com/s/pus9cwan90j6yy9/Screen%20Shot%202017-03-15%20at%202.02.10%20AM.png?dl=1)
 
-The authors also introduce a new hidden unit similar to the LSTM. This consists of a reset gate $r_j$ and an update gate $z_j$. The reset gate decides how much of the previous hidden state to include in computing a temporary new hidden state $\tilde{h_t}$, which also depends on the input $x_t$, while the update gate decides how much information from the previous hidden state will carry over to the current hidden state. So: $$h_j^t = z_jh_j^{t-1} + (1-z_j)\tilde{h^t_j}$$
+The authors also introduce a new hidden unit similar to the LSTM - the **Gated Recurrent Unit (GRU)**. This consists of a reset gate $r_j$ and an update gate $z_j$. The reset gate decides how much of the previous hidden state to include in computing a temporary new hidden state $\tilde{h_t}$, which also depends on the input $x_t$, while the update gate decides how much information from the previous hidden state will carry over to the current hidden state. So: $$h_j^t = z_jh_j^{t-1} + (1-z_j)\tilde{h^t_j}$$
 
 The RNN encoder decoder is applied in the scoring of phrase pairs in language translation. The statistical model of translation tries to find $f$ that maximizes $p(f|e) = p(e|f)p(e)$ (the translation and language model terms, respectively), given an input $e$. Phrase pairs from the two languages can be fed into the system, and the score is simply $p_{\theta}(y|x)$, where $(x, y)$ is the phrase pair. This score can then add as an additional feature in the model.
 
@@ -93,4 +95,26 @@ The picture from the paper helps to clarify this:
 
 So far, the model does not take into consideration previous alignment information when generating target words. To address this, the authors use an input feeding approach, where the $\tilde{h}_t$ from the previous time step in the decoder is concatenated to the input of the next time step. This makes the model aware of previous alignment choices.
 
-During training the authors pre-process the corpus by replacing words outside of the 50K most frequent with $<unknown>$ tags. The source sentence is reversed, gradient clipping used, and dropout ($p=0.2$) is employed between the spatial layers. $D$ is set to 10 for the local attention models,
+During training the authors pre-process the corpus by replacing words outside of the 50K most frequent with $<unknown>$ tags. The source sentence is reversed, gradient clipping used, and dropout ($p=0.2$) is employed between the spatial layers. $D$ is set to 10 for the local attention models.
+
+
+
+### **Dynamic Memory Networks for NLP**
+
+Paper: https://arxiv.org/pdf/1506.07285v1.pdf
+
+This paper discusses a framework for question answering given some previous inputs. The dataset consists of triples: a list of sentences (inputs), a question using facts found in the sentence, and an answer. Facebook's bAbI dataset is an example. The framework is divided into a series of modules: input module, semantic memory module, question module, episodic memory module, and an answer module.
+
+* **Semantic module**: The semantic module consists of word concepts and facts about them. In the paper, the module consists of embeddings for words in the form of Glove vectors, although the authors say the module could serve to store other knowledge as well.
+
+* **Input module**: The input module uses an RNN with GRUs to convert the input word embeddings into a sequence of facts. Specifically, for every word $w_t^I$ in the input, the associated fact vector is $c_t = GRU(L[w_t^I], c_{t-1})$, where $L[w]$ denotes the word embedding for word $w$.
+
+* **Question module**: The question module uses the same RNN (i.e., shares the embedding and GRU weights) to convert the question into a single question vector $q$, which is simply the final hidden state of the RNN when fed with the input ($q = q_{T_Q}$, where $T_Q$ is the length of the question).
+
+* **Episodic memory module**: This is the most crucial part of the entire network. The goal is to produce a final memory vector $m$. $m$ is generated from a sequence of episode vectors $e_i$, each one made by making a pass over all the facts $c_t$ and using a soft attention mechanism to selectively attend to them. The module can be broken down into an inner GRU and an outer GRU:
+	* Outer GRU: The outer GRU works on a sequence of episodes $e^i$, producing corresponding memory vectors. The GRU state is initialized with the question vector. The recurrence thus looks like: $m^i = GRU(e^i, m^{i-1})$. The final memory vector is the overall memory vector $m$.
+	* Inner GRU: The inner GRU computes episodes. Each time an episode $e^i$ is generated, we need the attention mechanism to "assign weights" to each of the input facts $c_t$. The attention mechanism works like a gate, and for each fact $c_t$, it computes $g_t^i = G(c_t, m^{i-1}, q)$. $G$ is a sigmoid function over a series of matrix multiplications and tanh layers (see the paper for more details). Note that the gates at each pass depend on the memory vector $m^{i-1}$ from the previous episode. Once the gates are calculated, the inner GRU then uses these gates to compute a sequence of hidden states for episode $i$: $h_t^i = g_t^iGRU(c_t, h_{t-1}^i) + (1-g_t^i)h^i_{t-1}$. The episode vector is the final hidden state: $e^i = h^i_{T_C}$, where $T_C$ is the number of candidate facts.
+
+* **Answer module**: The memory vector $m$ is fed into the answer module, which also consists of an RNN with GRUs. The initial hidden state $a_0 = m$.  The recurrence for the hidden state is then $a_t = GRU([y_{t-1};q], a_{t-1})$ and the output is $y_t = softmax(W^{(a)}a_t)$. The output can also be a special stop token denoting the end of the sentence. The model is trained with cross entropy error classification of the correct sequence appended with a special end-of-sequence token.
+
+The model is trained with backpropagation and Adagrad. The authors use $L_2$ regularization and 'word dropout', where each word vector is set to $0$ with some probability $p$. The model can then perform tasks like question answering, POS tagging, sentiment analysis and even machine translation, better than a lot of existing models.
