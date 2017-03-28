@@ -15,6 +15,9 @@ This is a list of summaries of papers in the field of deep learning I have been 
 	* Luong, Pham and Manning (2015)
 * [Ask Me Anything: Dynamic Memory Networks for Natural Language Processing](#dynamic-memory-networks-for-nlp)
 	* Kumar et al. (2016)
+* [Spatial Pyramid Pooling in Deep Convolutional
+Networks for Visual Recognition](#spatial-pyramid-pooling-in-deep-cnns)
+	* Kaiming He, Xiangyu Zhang, Shaoqing Ren, Jian Sun (2015)
 
 <br>
 
@@ -118,3 +121,19 @@ This paper discusses a framework for question answering given some previous inpu
 * **Answer module**: The memory vector $m$ is fed into the answer module, which also consists of an RNN with GRUs. The initial hidden state $a_0 = m$.  The recurrence for the hidden state is then $a_t = GRU([y_{t-1};q], a_{t-1})$ and the output is $y_t = softmax(W^{(a)}a_t)$. The output can also be a special stop token denoting the end of the sentence. The model is trained with cross entropy error classification of the correct sequence appended with a special end-of-sequence token.
 
 The model is trained with backpropagation and Adagrad. The authors use $L_2$ regularization and 'word dropout', where each word vector is set to $0$ with some probability $p$. The model can then perform tasks like question answering, POS tagging, sentiment analysis and even machine translation, better than a lot of existing models.
+
+
+
+### **Spatial Pyramid Pooling in Deep CNNs**
+
+Paper: https://arxiv.org/pdf/1406.4729.pdf
+
+In this papers, the authors address the issue of allowing images in the input to have variable sizes (dimensions). Typically in CNNs, all images in the input are pre-processed (e.g.: by cropping/ warping) so that the images are all of the same size. This is needed not because of the convolutional layers (which operate in a sliding window fashion), but for the fully-connected layers. The authors add a spatial pyramid pooling layer after the final convolutional layer to allow inputs of arbitrary size.
+
+As mentioned above, convolutional layers do not need fixed sized inputs. This is because the "filter" can be slid across the image/ feature maps with the appropriate stride until the entire image is covered. This also applies to the maxpooling layers that might be placed after the convolutional layers. In the paper, the spatial pyramid pooling layer is placed after the final convolutional layer. Suppose that the final convolutional layer has dimensions $d \times d \times k$, where $k$ is the number of filters (two of the dimensions are the same to make this example easier). Spatial pyramid pooling is analogous to creating a set of bins of varying size. The pyramid consists of 'level's, where each 'level' is like a grid laid out over each of the $d \times d$ filters. Each bin is like a square in these grids. For instance, if we want to create a $4 \times 4$ level, this level will give us $16$ bins, and the size of each bin will be $\lceil d/4 \rceil \times \lceil d/4 \rceil$ (with some bins possibly having parts outside the images). Within each bin, we can use a pooling operation (the paper uses maxpooling). This is similar to creating a maxpooling layer with with the dimension of each pool as $\lceil d/4 \rceil \times \lceil d/4 \rceil$, and a stride of $\lfloor d/4 \rfloor$. Each of these levels is applied to each layer in the filter. If we create $M$ bins in total across all the levels, the output of this layer will thus be $M$ $k-$dimensional vectors. This is illustrated in the following figure from the paper:
+
+![SPP layer](https://www.dropbox.com/s/56g6pee33vu7276/Screen%20Shot%202017-03-28%20at%201.25.32%20AM.png?dl=1)
+
+In this figure, there are 3 levels, $M = (16 + 4 + 1) = 21$, and $k = 256$.
+
+The authors state that current GPU implementations are preferably run on fixed input sizes, so at training time, they consider a set of predefined sizes. For each of these predefined sizes, a different network is used (all the networks share the same parameters, however, and the number of parameters is the same because the output of the  SPP layer is the same size for all networks).  In  other  words,  during training they implement the varying-input-size SPP-net by two fixed-size networks that share parameters.
