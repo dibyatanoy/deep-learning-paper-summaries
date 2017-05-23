@@ -15,9 +15,10 @@ This is a list of summaries of papers in the field of deep learning I have been 
 	* Luong, Pham and Manning (2015)
 * [Ask Me Anything: Dynamic Memory Networks for Natural Language Processing](#dynamic-memory-networks-for-nlp)
 	* Kumar et al. (2016)
-* [Spatial Pyramid Pooling in Deep Convolutional
-Networks for Visual Recognition](#spatial-pyramid-pooling-in-deep-cnns)
+* [Spatial Pyramid Pooling in Deep Convolutional Networks for Visual Recognition](#spatial-pyramid-pooling-in-deep-cnns)
 	* Kaiming He, Xiangyu Zhang, Shaoqing Ren, Jian Sun (2015)
+* [Neural Turing Machines](#neural-turing-machines)
+	* Alex Graves, Greg Wayne, Ivo Danihelka (2014)
 
 <br>
 
@@ -50,7 +51,7 @@ In this paper, the authors describe an RNN based approach for encoding a variabl
 
 The output of the encoder is the hidden state $c$ of the RNN at the last time step. For the decoder RNN, the hidden state at every time step is a function of the previous hidden state, the previous output, and $c$. That is, $h_{t} = f(h_{t-1}, y_{t-1}, c)$. The two components are then jointly trained to maximize the conditional normalized sum of the log likelihoods (the log likelihood of a single sequence-to-sequence translation is $\log{p_{\theta}(y_n | x_n)}$). The following image from the paper shows the broad overview of the architecture:
 
-![RNN encoder-decoder](https://www.dropbox.com/s/pus9cwan90j6yy9/Screen%20Shot%202017-03-15%20at%202.02.10%20AM.png?dl=1)
+<center>![RNN encoder-decoder](https://www.dropbox.com/s/pus9cwan90j6yy9/Screen%20Shot%202017-03-15%20at%202.02.10%20AM.png?dl=1)</center>
 
 The authors also introduce a new hidden unit similar to the LSTM - the **Gated Recurrent Unit (GRU)**. This consists of a reset gate $r_j$ and an update gate $z_j$. The reset gate decides how much of the previous hidden state to include in computing a temporary new hidden state $\tilde{h_t}$, which also depends on the input $x_t$, while the update gate decides how much information from the previous hidden state will carry over to the current hidden state. So: $$h_j^t = z_jh_j^{t-1} + (1-z_j)\tilde{h^t_j}$$
 
@@ -92,7 +93,7 @@ In both types of attention approaches, at each time step $t$ of the decoding pha
 
 The picture from the paper helps to clarify this:
 
-![Global attention model](https://www.dropbox.com/s/xcjh625ojtn3it5/Screen%20Shot%202017-03-17%20at%2012.03.42%20PM.png?dl=1)
+<center>![Global attention model](https://www.dropbox.com/s/xcjh625ojtn3it5/Screen%20Shot%202017-03-17%20at%2012.03.42%20PM.png?dl=1)</center>
 
 * **Local attention:** To reduce expense, local attention only considers a specific window of source words for every output time step. For every target word at time step $t$, the model generates an alignment position $p_t$, and only the set of source words in the window $[p_t-D, p_t+D]$ are used to calculate $c_t$ (similar to above). The authors use two methods to select $p_t$, the more successful being **local-p**: $p_t = S \cdot \sigma(v_p^T tanh(W_ph_t))$, where $W_p$ and $h_t$ are model parameters, and $S$ is the source sentence length. To attach more weight to words nearer to $p_t$, the authors attach a Gaussian weight to the scores, so $a_t(s) = align(h_t, \bar{h_s})exp(-\frac{(s-p_t)^2}{2\sigma^2})$, where the standard deviation is set to $\frac{D}{2}$, and $s$ is an index of a word within the window. The model is differentiable.
 
@@ -132,8 +133,53 @@ In this papers, the authors address the issue of allowing images in the input to
 
 As mentioned above, convolutional layers do not need fixed sized inputs. This is because the "filter" can be slid across the image/ feature maps with the appropriate stride until the entire image is covered. This also applies to the maxpooling layers that might be placed after the convolutional layers. In the paper, the spatial pyramid pooling layer is placed after the final convolutional layer. Suppose that the final convolutional layer has dimensions $d \times d \times k$, where $k$ is the number of filters (two of the dimensions are the same to make this example easier). Spatial pyramid pooling is analogous to creating a set of bins of varying size. The pyramid consists of 'level's, where each 'level' is like a grid laid out over each of the $d \times d$ filters. Each bin is like a square in these grids. For instance, if we want to create a $4 \times 4$ level, this level will give us $16$ bins, and the size of each bin will be $\lceil d/4 \rceil \times \lceil d/4 \rceil$ (with some bins possibly having parts outside the images). Within each bin, we can use a pooling operation (the paper uses maxpooling). This is similar to creating a maxpooling layer with with the dimension of each pool as $\lceil d/4 \rceil \times \lceil d/4 \rceil$, and a stride of $\lfloor d/4 \rfloor$. Each of these levels is applied to each layer in the filter. If we create $M$ bins in total across all the levels, the output of this layer will thus be $M$ $k-$dimensional vectors. This is illustrated in the following figure from the paper:
 
-![SPP layer](https://www.dropbox.com/s/56g6pee33vu7276/Screen%20Shot%202017-03-28%20at%201.25.32%20AM.png?dl=1)
+<center>![SPP layer](https://www.dropbox.com/s/56g6pee33vu7276/Screen%20Shot%202017-03-28%20at%201.25.32%20AM.png?dl=1)</center>
 
 In this figure, there are 3 levels, $M = (16 + 4 + 1) = 21$, and $k = 256$.
 
 The authors state that current GPU implementations are preferably run on fixed input sizes, so at training time, they consider a set of predefined sizes. For each of these predefined sizes, a different network is used (all the networks share the same parameters, however, and the number of parameters is the same because the output of the  SPP layer is the same size for all networks).  In  other  words,  during training they implement the varying-input-size SPP-net by two fixed-size networks that share parameters.
+
+
+
+### **Neural Turing Machines**
+
+Paper: https://arxiv.org/pdf/1410.5401.pdf
+
+The authors in this paper augment neural networks by adding the analog of an "addressable memory" to the system. The network consists of a controller (think CPU) that interacts with the external inputs and produces outputs, and a "memory matrix" (think RAM) that the controller can read to or write from via read/ write "heads". Since neural networks like RNNs using LSTMs only have a limited amount of memory, the idea is that having a dedicated memory matrix will make recalling information easier. The basic structure is as shown in the diagram below:
+
+<center>![NTM layout](https://www.dropbox.com/s/kxbjbgjte6i2wpg/Screen%20Shot%202017-05-23%20at%2012.14.44%20PM.png?dl=1)</center>
+
+There are 2 main parts that are new to this network: the reading mechanism and the writing mechanism.
+
+* **Reading Mechanism**: We use $M_t$ to denote the contents of the memory matrix at time $t$. The memory matrix is an $N\times M$ matrix, consisting of $N$ memory locations each of size $M$. Reading is similar to applying an attention mechanism over all the memory locations/ vectors. Every read head outputs a vector $w_t$ of normalized read weights, such that $\sum\limits_{i}w_t(i) = 1$. The length $M$ read vector $r_t$ produced by this head at time $t$ is then a weighted average of all the memory locations:
+
+   <center>$r_t = \sum\limits_{i}w_t(i)M_t(i)$</center>
+
+	This is the result of the read operation by this read head at time $t$.
+
+* **Writing Mechanism**: The writing mechanism consists of 2 steps: an 'erase' followed by an 'add'. Every write head produces 1 length $N$ and 2 length $M$ vectors: a weighting vector $w_t$, an erase vector $e_t$ and an add vector $a_t$, respectively. The erase operation modifies the memory vectors from the previous step according to $\tilde{M_t}(i) = M_{t-1}(i)[1-w_t(i)e_t]$. The add operation then adds to these modified vectors, according to $M_t(i) = \tilde{M_t}(i) + w_t(i)a_t$.
+
+* **Producing the Weights (Addressing Mechanism)**: The weights produced by both the read and write vectors are via a combination of content-based addressing (pick out elements based on content) and location-based addressing.
+For the content-based addressing, each head produces a length $M$ key vector $k_t$: the "content" that we want to search for. Each memory location is then assigned a weight based on how similar it is to $k_t$, and the result of the content-based addressing is then a softmax-like weight calculation. Specifically, denoting the similarity mechanism (e.g.: cosine distance) as $K[\cdot ; \cdot]$, we can write:
+
+	<center>$w^c_t(i) = \frac{exp(\beta_{t}K[k_t, M_t(i)])}{\sum_{j}exp(\beta_{t}K[k_t, M_t(j)])}$</center>
+
+	where $\beta_t$, produced also by the head, is called the "positive key strength" and determines how sharply to reward similarity to the key vector.
+
+  The location based addressing operates on top of these weights. Each head emits a scalar interpolation gate $g_t$, between 0 and 1, which blends between the weighting from the previous time step, and the current content-based weights.
+
+ <center>$w_t^g = g_tw^c_t + (1-g_t)w_{t-1}$. </center>
+
+ If this gate is $0$, the content-weighting is entirely ignored.
+ After this step, each head emits a shift weighting $s_t$ which can be used for head rotation. The rotate operation is useful for sequential memory access, for example. If the range of valid shifts is $+/-k$, then $s_t$ is a length $N$ vector with $2k+1$ non-zero elements, corresponding to the degrees to which the shifts in the range $-k$ to $+k$ are allowed. The rotated weight vector is thus obtained by:
+	<center>$\tilde{w_t}(i) = \sum\limits_{j=0}^{N-1}w^g_t(j)s_t((j-i) mod N)$</center>
+
+ Every element $\tilde{w_t}(i)$ in the rotated weight vector is a blend of all the positions from which a valid shift to position $i$ exists, weighed by the appropriate shift vector weights. Finally to sharpen these weights, each head emits one scalar $\gamma_t$, which is used as follows:
+ <center>$w_t(i) = \frac{\tilde{w_t}(i)^{\gamma_t}}{\sum_j \tilde{w_t}(j)^{\gamma_t}}$</center>
+
+
+The controller can use either a feed-forward neural net or a recurrent neural net. If an RNN with an LSTM is used, the memory of the LSTMs can be likened to the registers of a CPU, allowing data from multiple times steps to be stored and used together.
+
+The NTM is evaluated on algorithmic tasks such as copying, repeat-copying, associative recall, dynamic N-grams and priority sort.
+
+**N.B.**: What are Hopfield networks?
