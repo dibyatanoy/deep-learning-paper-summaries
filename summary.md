@@ -5,6 +5,8 @@
 This is a list of summaries of papers in the field of deep learning I have been reading recently. The summaries are meant to help me internalize and keep a record of the techniques I have read about, and not as full analyses of the papers.
 
 # Table of contents
+* [Emergence of Invariance and Disentanglement in Deep Representations - Parts 1 and 2](#emergence-of-invariance-and-disentanglement-in-deep-representations-part-1)
+	* Alessandro Achille, Stefano Soatto (2018)
 * [Speech Recognition With Deep Recurrent Neural Networks](#speech-recognition-with-rnns)
 	* Graves, Mohamed and Hinton
 * [Learning Phrase Representations using RNN Encoder–Decoder for Statistical Machine Translation](#rnn-encoder-decoders-in-statistical-machine-translation)
@@ -19,10 +21,46 @@ This is a list of summaries of papers in the field of deep learning I have been 
 	* Kaiming He, Xiangyu Zhang, Shaoqing Ren, Jian Sun (2015)
 * [Neural Turing Machines](#neural-turing-machines)
 	* Alex Graves, Greg Wayne, Ivo Danihelka (2014)
-* [Emergence of Invariance and Disentanglement in Deep Representations](#emergence-of-invariance-and-disentanglement-in-deep-representations-part-1)
-	* Alessandro Achille, Stefano Soatto (2018)
 
 <br>
+
+### **Emergence of Invariance and Disentanglement in Deep Representations (Part 1)**
+
+Paper: https://arxiv.org/pdf/1706.01350.pdf
+
+This paper looks at the broad question of "Why do heavily over-parametrized deep nets generalize well?" from the perspective of Information Theory. This was the first paper I've read fully that takes an information theory approach, and was quite a long read.
+
+First, it's useful to know some terms related to representations. $z$ is a _representation_ of $x$ if "the distribution of $z$ if fully described by the conditional $p(z|x)$", giving rise to the Markov chain $y \rightarrow x \rightarrow z$, $y$ being the task. $z$ is **sufficient** for $y$ if $I(z;y) = I(x;y)$ (remember that mutual information, informally, is a measure of how much information $x$ captures about $y$) . $z$ is **minimal** when $I(x;z)$ is smallest among sufficient representations (we don't want to memorize too much). A **nuisance** $n$ is something that affects $x$ but is "not informative to the task we're trying to solve", i.e., $I(y;n)  = 0$. A representation $z$ that minimizes $I(z;n)$ among all sufficient representations is said to be **maximally insensitive** to $n$. The [Total Correlation (TC)](https://en.wikipedia.org/wiki/Total_correlation) of a distribution is defined as $TC(z) = KL(p(z) || \Pi_{i} p(z_i))$ - note that TC can also be regarded as the amount of (redundant) shared information among variables in a set. A useful relation to remember is $I(x;y) = KL(p(x, y) || p(x)p(y))$ - the expected extra (redundant) number of bits to identify $x$ and $y$ if they are transmitted using their marginal distributions instead of their joint distributions.
+
+One of the first interesting facts in the paper is that invariants (think nuisance-free representations) can be constructed by reducing the mutual information between $x$ and $z$, i.e., minimality. The authors state that if $n\rightarrow x \rightarrow z$, then $I(z;n) \leq I(z;x) - I(x;y)$. The second term is a constant, so the lower the value $I(z;x)$, the more invariant the representation $z$. Bottlenecks, such as dimensionality reduction between successive layers of a network, also promote invariance - if $x \rightarrow z_1 \rightarrow z_2$, and there is a communication bottleneck between $z_1$ and $z_2$, then provided that $z_2$ is still sufficient, $z_2$ is more nuisance-invariant than $z_1.$ This also implies that stacking layers ("deep nets") promotes invariance, although this does not simply mean that more layers means better generalization, since it assumes that the last layer is still a sufficient representation for $x$ (meaning the network has been trained properly, which is increasingly difficult for large networks).
+
+The next part of the paper states that the amount of information in the weights can act as a useful regularizer, allowing us to control when a network will overfit/ underfit. The paper decomposes the standard cross-entropy loss into the following form: $$H_{p, q}(x, y) = \mathrm{(sum\ of\ positive\ terms)} - I(y;w| \mathbf{x}, \theta)$$ The only negative quantity here is the last term, which can be thought of as how much information the weights have "memorized" about the labels (since we are already conditioning on the true state of nature and the dataset). Thus, a network _could_ minimize this loss simply by increasing the term on the right, leading to overfitting, i.e., by memorizing the dataset. We would thus want to add a term back into the loss to account for this, but $I(y;w|\mathbf{x}, \theta)$ is intractable. We can still upper bound this term, by noticing that $I(y;w|\mathbf{x}, \theta) \leq I(w;\mathcal{D}|\theta) \leq I(w; \mathcal{D})$ (since $\theta \rightarrow \mathcal{D}$, and conditioning reduces mutual information for a Markov chain). Thus, we can write the new loss as $L = H_{p, q}(\mathbf{x}, y) + \beta I(w;\mathcal{D})$. Apparently, this was suggested as a regularizer as far back as 1993 by Hinton, but no efficient way to optimize this was known until [Kingma's paper](https://arxiv.org/pdf/1506.02557.pdf) in 2015. The authors also further upper bound this term, showing that $I(w; \mathcal{D}) \leq KL(q(w|\mathcal{D}) || \Pi_{i} q(w_i))$, where $q(w)$ is a distribution over the weights over all possible trainings and datasets. This is then used in the local reparametrization trick.
+
+Interestingly, the $\beta$ term can also be used to predict precisely when overfitting or underfitting will occur for random labels, as shown below (figures from the paper). By changing the value of $\beta$, which controls the amount of information in the weights, the authors also obtain a graph that closely resembles the classing bias-variance tradeoff curve, suggesting that $\beta$ (and thus, the information in the weights) correlates well with generalization.
+
+<center>![Train and test accuracies for different values of beta](https://www.dropbox.com/s/r1ua7avmxugwzbi/Screen%20Shot%202018-08-20%20at%203.29.49%20PM.png?dl=1)</center>
+
+<center>![Test error vs beta - resembles bias-variance tradeoff curve](https://www.dropbox.com/s/nurqe525o8zfduf/Screen%20Shot%202018-08-20%20at%203.30.24%20PM.png?dl=1)</center>
+
+The paper also mentions that under certain conditions, Stochastic Gradient Descent, without this regularizer, "introduces an entropic bias of a very similar form to the information in the weights" that was described above. Additionally, the authors also note that some forms of SGD bias the optimization towards "flat minima", which require lower $I(w;\mathcal{D})$. This could explain why even without this regularizer, networks can often be trained to be generalizable. Note that it is commonly believed that SGD implicitly acts as a regularizer, due to the noise introduced by the stochasticity.
+
+The second part of the writeup will deal with the remaining results in the paper.
+
+
+
+
+### **Emergence of Invariance and Disentanglement in Deep Representations (Part 2)**
+
+Paper: https://arxiv.org/pdf/1706.01350.pdf
+
+Sections 4 and 5 of this paper derive more interesting results about the relationship between information in the weights, flat minima, and sufficiency. Using modeling assumptions on the weights, the authors upper bound the information in the weights similarly to [Kingma et al. (2015)](https://arxiv.org/pdf/1506.02557.pdf). They use an improper log-uniform prior on $w$ ($\tilde{q}(w_i) = c/|w_i|$), and parametrize the weight distribution during training as $w_i | \mathcal{D} \sim \epsilon_i\hat{w}_i$, where $\hat{w}_i$ is a learned mean and $\epsilon_i \sim \log \mathcal{N}(-\alpha_i/2, \alpha_i)$ is "i.i.d. multiplicative log-normal noise with mean 1 and variance $\exp(\alpha_i)-1$". Using this parametrization, they show an upper bound on the information in the weights $I(w; \mathcal{D})$, which is used with the local reparametrization trick as a regularizer.
+
+The authors also formally show a relationship between $I(w; \mathcal{D})$ and the "flatness of the minima". Flatness is a vague term, and is formalized as "the nuclear norm of the Hessian of the loss function". While I only have a "visual intuition" of why this would work (smaller nuclear norm $\rightarrow$ smaller singular values of Hessian $\rightarrow$ less rapidly changing gradients?), I have yet to find a more rigorous justification of this. The authors show that $$I(w;\mathcal{D}) \leq \frac{1}{2}K[(\log ||\hat{w}||_2^2) + log||\mathcal{H}||_* - \mathrm{(some\  constant)}]$$ where $\hat{w}$ is the minima of the weights according to the cross-entropy loss, $\mathcal{H}$ is the Hessian, and $K =\  \mathrel{dim}(w)$. Thus, the flatter the minima, the lower the information in the weights!
+
+In the next section, the authors prove that $I(x;z) + TC(z)$ is tightly bounded by $\tilde{I}(w;\mathcal{D})$ (this is itself a sharp upper bound for $I(w;\mathcal{D})$). This means that lowering the information in the weights (explicitly, or implicitly via SGD) automatically improves the minimality and hence, by earlier propositions (see part 1 above), the invariance and disentanglement of the learned representation. Using the Markov property of the layers, the authors extend this to multi-layer networks. Taken together with the facts stated earlier, this implies that SGD is "biased toward learning invariant and disentangled representations of the data".
+
+
+
 
 ### **Speech Recognition with RNNs**
 
@@ -185,27 +223,3 @@ The controller can use either a feed-forward neural net or a recurrent neural ne
 The NTM is evaluated on algorithmic tasks such as copying, repeat-copying, associative recall, dynamic N-grams and priority sort.
 
 **N.B.**: What are Hopfield networks?
-
-
-
-### **Emergence of Invariance and Disentanglement in Deep Representations (Part 1)**
-
-Paper: https://arxiv.org/pdf/1706.01350.pdf
-
-This paper looks at the broad question of "Why do heavily over-parametrized deep nets generalize well?" from the perspective of Information Theory. This was the first paper I've read fully that takes an information theory approach, and was quite a long read.
-
-First, it's useful to know some terms related to representations. $z$ is a _representation_ of $x$ if "the distribution of $z$ if fully described by the conditional $p(z|x)$", giving rise to the Markov chain $y \rightarrow x \rightarrow z$, $y$ being the task. $z$ is **sufficient** for $y$ if $I(z;y) = I(x;y)$ (remember that mutual information, informally, is a measure of how much information $x$ captures about $y$) . $z$ is **minimal** when $I(x;z)$ is smallest among sufficient representations (we don't want to memorize too much). A **nuisance** $n$ is something that affects $x$ but is "not informative to the task we're trying to solve", i.e., $I(y;n)  = 0$. A representation $z$ that minimizes $I(z;n)$ among all sufficient representations is said to be **maximally insensitive** to $n$. The [Total Correlation (TC)](https://en.wikipedia.org/wiki/Total_correlation) of a distribution is defined as $TC(z) = KL(p(z) || \Pi_{i} p(z_i))$ - note that TC can also be regarded as the amount of (redundant) shared information among variables in a set. A useful relation to remember is $I(x;y) = KL(p(x, y) || p(x)p(y))$ - the expected extra (redundant) number of bits to identify $x$ and $y$ if they are transmitted using their marginal distributions instead of their joint distributions.
-
-One of the first interesting facts in the paper is that invariants (think nuisance-free representations) can be constructed by reducing the mutual information between $x$ and $z$, i.e., minimality. The authors state that if $n\rightarrow x \rightarrow z$, then $I(z;n) \leq I(z;x) - I(x;y)$. The second term is a constant, so the lower the value $I(z;x)$, the more invariant the representation $z$. Bottlenecks, such as dimensionality reduction between successive layers of a network, also promote invariance - if $x \rightarrow z_1 \rightarrow z_2$, and there is a communication bottleneck between $z_1$ and $z_2$, then provided that $z_2$ is still sufficient, $z_2$ is more nuisance-invariant than $z_1.$ This also implies that stacking layers ("deep nets") promotes invariance, although this does not simply mean that more layers means better generalization, since it assumes that the last layer is still a sufficient representation for $x$ (meaning the network has been trained properly, which is increasingly difficult for large networks).
-
-The next part of the paper states that the amount of information in the weights can act as a useful regularizer, allowing us to control when a network will overfit/ underfit. The paper decomposes the standard cross-entropy loss into the following form: $$H_{p, q}(x, y) = \mathrm{(sum\ of\ positive\ terms)} - I(y;w| \mathbf{x}, \theta)$$ The only negative quantity here is the last term, which can be thought of as how much information the weights have "memorized" about the labels (since we are already conditioning on the true state of nature and the dataset). Thus, a network _could_ minimize this loss simply by increasing the term on the right, leading to overfitting, i.e., by memorizing the dataset. We would thus want to add a term back into the loss to account for this, but $I(y;w|\mathbf{x}, \theta)$ is intractable. We can still upper bound this term, by noticing that $I(y;w|\mathbf{x}, \theta) \leq I(w;\mathcal{D}|\theta) \leq I(w; \mathcal{D})$ (since $\theta \rightarrow \mathcal{D}$, and conditioning reduces mutual information for a Markov chain). Thus, we can write the new loss as $L = H_{p, q}(\mathbf{x}, y) + \beta I(w;\mathcal{D})$. Apparently, this was suggested as a regularizer as far back as 1993 by Hinton, but no efficient way to optimize this was known until [Kingma's paper](https://arxiv.org/pdf/1506.02557.pdf) in 2015. The authors also further upper bound this term, showing that $I(w; \mathcal{D}) \leq KL(q(w|\mathcal{D}) || \Pi_{i} q(w_i))$, where $q(w)$ is a distribution over the weights over all possible trainings and datasets. This is then used in the local reparametrization trick.
-
-Interestingly, the $\beta$ term can also be used to predict precisely when overfitting or underfitting will occur for random labels, as shown below (figures from the paper). By changing the value of $\beta$, which controls the amount of information in the weights, the authors also obtain a graph that closely resembles the classing bias-variance tradeoff curve, suggesting that $\beta$ (and thus, the information in the weights) correlates well with generalization.
-
-<center>![Train and test accuracies for different values of beta](https://www.dropbox.com/s/r1ua7avmxugwzbi/Screen%20Shot%202018-08-20%20at%203.29.49%20PM.png?dl=1)</center>
-
-<center>![Test error vs beta - resembles bias-variance tradeoff curve](https://www.dropbox.com/s/nurqe525o8zfduf/Screen%20Shot%202018-08-20%20at%203.30.24%20PM.png?dl=1)</center>
-
-The paper also mentions that under certain conditions, Stochastic Gradient Descent, without this regularizer, "introduces an entropic bias of a very similar form to the information in the weights" that was described above. Additionally, the authors also note that some forms of SGD bias the optimization towards "flat minima", which require lower $I(w;\mathcal{D})$. This could explain why even without this regularizer, networks can often be trained to be generalizable. Note that it is commonly believed that SGD implicitly acts as a regularizer, due to the noise introduced by the stochasticity.
-
-The second part of the writeup will deal with the remaining results in the paper.
